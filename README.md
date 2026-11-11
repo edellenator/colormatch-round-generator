@@ -16,3 +16,4 @@ In the print dialog, choose the label printer and set the paper size to 4 × 6 i
 
 ## Publishing (GitHub Pages)
 Settings → Pages → Build and deployment → Source: *Deploy from a branch* → Branch: `main` / `(root)` → Save.
+This repository is already published this way.
