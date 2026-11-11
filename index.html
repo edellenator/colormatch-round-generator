@@ -1,0 +1,1131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ColorMatch Round Generator</title>
+<style>
+  @page { size: 4in 6in; margin: 0; }
+
+  :root {
+    --ink: #1b1f24;
+    --muted: #5f6b7a;
+    --line: #d5dbe3;
+    --bg: #eef1f5;
+    --panel: #ffffff;
+    --accent: #2457d6;
+    --accent-ink: #ffffff;
+    --error: #c62828;
+    --lock-bg: #fff4c2;
+    --lock-line: #d9a800;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 15px;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    background: #1b1f24;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .brand { font-weight: 700; font-size: 17px; }
+  .topbar nav { display: flex; gap: 6px; }
+  .topbar nav a {
+    color: #cfd6df;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 6px;
+  }
+  .topbar nav a:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .topbar nav a.active { color: #fff; background: rgba(255,255,255,.16); }
+
+  .wrap { max-width: 940px; margin: 0 auto; padding: 24px 16px 60px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+  }
+  h1 { margin: 0; font-size: 22px; }
+  h2 { margin: 0; font-size: 20px; }
+
+  /* ---------- Previous rounds ---------- */
+  .prev {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  .prev > summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    font-weight: 700;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .prev > summary::-webkit-details-marker { display: none; }
+  .prev > summary::before { content: "▸"; color: var(--muted); }
+  .prev[open] > summary::before { content: "▾"; }
+  .prev .details { padding: 0 16px 16px; }
+
+  /* ---------- Form ---------- */
+  .form-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .round-badge {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .full { grid-column: 1 / -1; }
+  .field { margin-bottom: 18px; }
+  .field > label, .field > .legend {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  input[type="text"], input[type="number"], input[type="date"], input[type="search"], textarea {
+    width: 100%;
+    font: inherit;
+    font-size: 15px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+  }
+  textarea { min-height: 110px; resize: vertical; }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  input:disabled { background: transparent; color: var(--ink); border-color: transparent; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .err { font-size: 13px; color: var(--error); margin-top: 5px; display: none; }
+  .field.invalid > .err { display: block; }
+  .field.invalid input[type="text"] { border-color: var(--error); }
+
+  .req { color: var(--error); }
+  .section-cap {
+    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; margin: 4px 0 14px;
+  }
+  .section-cap span { text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .flags { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0 20px; }
+
+  /* Segmented yes/no controls */
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button {
+    font: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 20px;
+    border: 0;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
+  .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+  .seg.disabled { opacity: .45; }
+  .seg.disabled button { cursor: not-allowed; }
+
+  /* Spot colors */
+  .color-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px 14px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: #fafbfc;
+  }
+  .color-row.locked { background: var(--lock-bg); border-color: var(--lock-line); }
+  .c-name-wrap { flex: 1 1 170px; min-width: 150px; }
+  .c-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .grp { display: flex; gap: 6px; }
+  .grp .c-field label { text-align: center; }
+  .grp input { width: 62px; padding: 9px 6px; text-align: center; }
+  .grp input::-webkit-outer-spin-button, .grp input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .grp input.bad { border-color: var(--error); }
+  .file-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .file-row input { flex: 1; }
+  .prev > summary .modify { margin-left: auto; font-weight: 600; }
+  .round-badge.editing { background: #b26a00; }
+  .edit-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    background: #fff4e0; border: 1px solid #f0c27a; border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 18px; font-size: 14px;
+  }
+  .revised { font-size: 13px; color: #b26a00; font-weight: 600; }
+  .c-chart { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding-bottom: 10px; cursor: pointer; white-space: nowrap; }
+  .c-chart input { width: 17px; height: 17px; margin: 0; accent-color: var(--accent); }
+  .c-actions { display: flex; gap: 6px; }
+  .c-err { flex-basis: 100%; color: var(--error); font-size: 13px; }
+  .c-err:empty { display: none; }
+
+  /* Buttons */
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 10px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+  }
+  .btn:hover:not(:disabled) { border-color: #aab4c0; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.sm { padding: 8px 12px; font-size: 14px; }
+  .btn.done { background: #1f8a4c; border-color: #1f8a4c; color: #fff; }
+  .btn.link { border: 0; background: none; color: var(--muted); padding: 8px 6px; }
+  .btn.link:hover { color: var(--error); }
+  .print-bar { display: flex; justify-content: flex-end; margin-top: 8px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .print-bar .btn { padding: 12px 40px; font-size: 16px; }
+
+  /* ---------- Details (log + prev rounds) ---------- */
+  .kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 20px; margin: 4px 0 12px; }
+  .kv div span { display: block; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .kv div b { font-weight: 600; word-break: break-word; white-space: pre-line; }
+  table.colors { border-collapse: collapse; width: 100%; margin: 4px 0 12px; font-size: 14px; }
+  table.colors th, table.colors td { border: 1px solid var(--line); padding: 5px 8px; text-align: center; }
+  table.colors th { background: #f3f5f8; font-size: 12px; }
+  table.colors td:first-child, table.colors th:first-child { text-align: left; }
+  .notes { white-space: pre-wrap; background: #f7f8fa; border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+  .sub-cap { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-top: 8px; }
+
+  /* ---------- Log ---------- */
+  .log-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .count { color: var(--muted); font-size: 14px; }
+  .filters { display: grid; grid-template-columns: 1fr 160px 160px auto; gap: 12px; align-items: end; margin-bottom: 20px; }
+  .filters label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+  .log-item { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; background: #fff; }
+  .log-row { display: flex; align-items: center; gap: 8px; padding-right: 14px; }
+  .log-row .continue { white-space: nowrap; }
+  .log-meta { padding: 12px 0 0; font-size: 14px; color: var(--muted); }
+  .log-meta b { color: var(--ink); }
+  .log-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .log-head-actions .count { margin-right: 6px; }
+  .log-sum {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 20px 2fr 1fr 1fr 1.3fr;
+    gap: 12px;
+    align-items: center;
+    text-align: left;
+    font: inherit;
+    background: none;
+    border: 0;
+    padding: 14px 16px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .log-sum .chev { color: var(--muted); }
+  .log-sum small { display: block; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .log-sum b { font-weight: 600; word-break: break-word; }
+  .log-body { border-top: 1px solid var(--line); padding: 4px 16px 16px; }
+  .round-block { border-bottom: 1px dashed var(--line); padding: 14px 0; }
+  .round-block:last-child { border-bottom: 0; }
+  .round-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .round-title h3 { margin: 0; font-size: 16px; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+
+  /* ---------- Modal + loading ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(15, 20, 28, .5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    z-index: 100;
+  }
+  .modal {
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  }
+  .modal h3 { margin: 0 0 8px; font-size: 18px; }
+  .modal p { margin: 0 0 20px; color: var(--muted); }
+  .modal .actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .loadbar { height: 10px; background: #e3e8ef; border-radius: 999px; overflow: hidden; margin-top: 16px; }
+  .loadbar div { height: 100%; width: 0; background: var(--accent); animation: fill 1.25s linear forwards; }
+  @keyframes fill { to { width: 100%; } }
+
+  /* ---------- 4x6 label ---------- */
+  #print-area { position: fixed; left: -10000px; top: 0; }
+  .label {
+    --s: 1;
+    width: 4in;
+    height: 6in;
+    background: #fff;
+    color: #000;
+    padding: 0.2in;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .l-top { display: flex; border: 3px solid #000; }
+  .l-brand {
+    flex: 1;
+    background: #000;
+    color: #fff;
+    font-weight: 800;
+    font-size: calc(15pt * var(--s));
+    letter-spacing: .06em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0.08in;
+  }
+  .l-round { width: 1.35in; text-align: center; padding: calc(0.06in * var(--s)) 0; }
+  .l-round small { display: block; font-size: calc(10pt * var(--s)); font-weight: 800; letter-spacing: .1em; }
+  .l-round b { display: block; font-size: calc(60pt * var(--s)); line-height: 1; }
+  .l-block { flex: 1; display: flex; flex-direction: column; justify-content: center; border-bottom: 2px solid #000; padding: calc(0.06in * var(--s)) 0; min-height: 0; }
+  .l-block:last-child { border-bottom: 0; }
+  .l-cap { font-size: calc(10pt * var(--s)); font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-bottom: calc(3px * var(--s)); }
+  .l-ids { flex-direction: row; justify-content: space-between; align-items: center; gap: 0.2in; }
+  .l-ids > div { flex: none; }
+  .l-job { font-family: "Courier New", monospace; font-weight: 800; font-size: calc(42pt * var(--s)); line-height: 1; white-space: nowrap; }
+  .l-big { font-weight: 800; font-size: calc(26pt * var(--s)); line-height: 1.1; word-break: break-word; }
+
+  @media (max-width: 680px) {
+    .grid { grid-template-columns: 1fr; }
+    .filters { grid-template-columns: 1fr 1fr; }
+    .filters .search { grid-column: 1 / -1; }
+    .log-sum { grid-template-columns: 20px 1fr 1fr; }
+    .log-row { flex-wrap: wrap; padding: 0 14px 12px 0; }
+    .log-row .continue { margin-left: 48px; }
+  }
+
+  @media print {
+    html, body { background: #fff !important; margin: 0; padding: 0; }
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { position: static; }
+    .label, .l-brand { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">ColorMatch Round Generator</div>
+  <nav>
+    <a href="#generator" id="nav-gen">Generator</a>
+    <a href="#log" id="nav-log">ColorMatch Log</a>
+  </nav>
+</header>
+
+<!-- ================= GENERATOR ================= -->
+<main class="wrap" id="view-gen">
+  <div id="prev-rounds"></div>
+
+  <form id="form" class="panel" novalidate autocomplete="off">
+    <div class="form-head">
+      <h1>ColorMatch Round Generator</h1>
+      <span class="round-badge" id="round-badge">Round 1</span>
+    </div>
+
+    <div class="edit-banner" id="edit-banner" hidden>
+      <span id="edit-text"></span>
+      <button type="button" class="btn sm" id="stop-edit">Stop modifying</button>
+    </div>
+
+    <div class="grid">
+      <div class="field" id="f-operator">
+        <label for="operator">Designer Name <span class="req">*</span></label>
+        <input type="text" id="operator" autocomplete="name">
+        <div class="err">Designer name is required.</div>
+      </div>
+
+      <div class="field" id="f-printer">
+        <label for="printer">Printer <span class="req">*</span></label>
+        <input type="text" id="printer">
+        <div class="err">Printer is required.</div>
+      </div>
+
+      <div class="field" id="f-order">
+        <label for="order">Job Number <span class="req">*</span></label>
+        <input type="text" id="order" maxlength="8" placeholder="A0000123" spellcheck="false">
+        <div class="hint">The letter A followed by 7 numbers</div>
+        <div class="err">Must be "A" followed by exactly 7 numbers (e.g. A0000123).</div>
+      </div>
+
+      <div class="field" id="f-line">
+        <label for="line">Line # <span class="req">*</span></label>
+        <input type="text" id="line" inputmode="numeric" pattern="[0-9]*" spellcheck="false">
+        <div class="hint">Numbers only</div>
+        <div class="err">Line # is required.</div>
+      </div>
+    </div>
+
+    <div class="section-cap">Optional details <span>(saved to the log, not printed on the label)</span></div>
+
+    <div class="grid">
+      <div class="field full" id="f-title">
+        <label for="title">ColorMatch Title</label>
+        <input type="text" id="title">
+      </div>
+
+      <div class="field full">
+        <label for="material">Material</label>
+        <input type="text" id="material">
+      </div>
+
+      <div class="field full" id="f-files">
+        <span class="legend">File Name(s)</span>
+        <div id="files"></div>
+        <button type="button" class="btn sm" id="add-file">+ Add File Name</button>
+      </div>
+    </div>
+
+    <div class="flags">
+      <div class="field"><span class="legend">White Under</span><div class="seg" data-name="whiteUnder" data-options="Yes,No"></div></div>
+      <div class="field"><span class="legend">White Over</span><div class="seg" data-name="whiteOver" data-options="Yes,No"></div></div>
+      <div class="field"><span class="legend">Haptic</span><div class="seg" data-name="haptic" data-options="Yes,No"></div></div>
+      <div class="field"><span class="legend">Spot Gloss</span><div class="seg" data-name="spotGloss" data-options="Yes,No"></div></div>
+      <div class="field">
+        <span class="legend">Haptic/Spot Gloss Depth</span>
+        <div class="seg" data-name="depth" data-options="6,12,18"></div>
+        <div class="hint">Available when Haptic or Spot Gloss is Yes</div>
+      </div>
+    </div>
+
+    <div class="field" id="f-colors">
+      <span class="legend">Spot Color(s)</span>
+      <div id="colors"></div>
+      <button type="button" class="btn sm" id="add-color">+ Add Color</button>
+      <div class="err">Fix the spot color errors above before printing.</div>
+    </div>
+
+    <div class="field">
+      <label for="notes">Notes</label>
+      <textarea id="notes"></textarea>
+    </div>
+
+    <div class="print-bar">
+      <button type="submit" class="btn primary">Print</button>
+    </div>
+  </form>
+</main>
+
+<!-- ================= LOG ================= -->
+<main class="wrap" id="view-log" hidden>
+  <div class="panel">
+    <div class="log-head">
+      <h2>ColorMatch Log</h2>
+      <div class="log-head-actions">
+        <span class="count" id="log-count"></span>
+        <button type="button" class="btn sm" id="download">Download CSV</button>
+        <button type="button" class="btn sm" id="backup" title="Full copy of the log that can be restored later or on another computer">Download Backup</button>
+        <button type="button" class="btn sm" id="restore" title="Load a backup file into this log">Restore Backup</button>
+        <input type="file" id="restore-file" accept=".json,application/json" hidden>
+      </div>
+    </div>
+    <div class="filters">
+      <div class="search">
+        <label for="q">Search</label>
+        <input type="search" id="q" placeholder="Search any text…">
+      </div>
+      <div>
+        <label for="from">From</label>
+        <input type="date" id="from">
+      </div>
+      <div>
+        <label for="to">To</label>
+        <input type="date" id="to">
+      </div>
+      <button type="button" class="btn" id="clear-filters">Clear</button>
+    </div>
+    <div id="log-list"></div>
+  </div>
+</main>
+
+<div id="print-area"></div>
+<div id="modal-root"></div>
+
+<script>
+(() => {
+  const STORE = 'cmrg.records.v1';
+  const SEQ = 'cmrg.seq.v1';
+  const ORDER_RE = /^A\d{7}$/;
+  const RANGES = { L: [0, 100], A: [-100, 100], B: [-100, 100], C: [0, 100], M: [0, 100], Y: [0, 100], K: [0, 100] };
+  const KEYS = Object.keys(RANGES);
+  const FLAG_FIELDS = [['whiteUnder', 'White Under'], ['whiteOver', 'White Over'], ['haptic', 'Haptic'], ['spotGloss', 'Spot Gloss']];
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtDT = iso => new Date(iso).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: 'numeric', minute: '2-digit' });
+  const fmtD = iso => new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
+  const dateKey = iso => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const num = v => (v === null || v === undefined || v === '') ? '–' : esc(v);
+  const filesOf = d => d.files || (d.file ? [d.file] : []);   // older rounds stored a single "file"
+
+  /* ---------- Storage ---------- */
+  function loadRecords() {
+    try { return JSON.parse(localStorage.getItem(STORE)) || []; } catch { return []; }
+  }
+  function saveRecords(records) {
+    localStorage.setItem(STORE, JSON.stringify(records));
+  }
+  function nextId(records) {
+    let n = parseInt(localStorage.getItem(SEQ) || '0', 10) || 0;
+    for (const r of records) n = Math.max(n, parseInt(String(r.id).replace(/\D/g, ''), 10) || 0);
+    n += 1;
+    localStorage.setItem(SEQ, String(n));
+    return 'CM-' + String(n).padStart(6, '0');
+  }
+
+  /* ---------- Modals ---------- */
+  function modal({ title, body, actions }) {
+    return new Promise(resolve => {
+      const root = $('modal-root');
+      const ov = document.createElement('div');
+      ov.className = 'overlay';
+      ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true">
+        <h3>${esc(title)}</h3><p>${esc(body)}</p>
+        <div class="actions">${actions.map((a, i) => `<button type="button" class="btn ${a.primary ? 'primary' : ''}" data-i="${i}">${esc(a.label)}</button>`).join('')}</div>
+      </div>`;
+      const close = v => { document.removeEventListener('keydown', onKey); ov.remove(); resolve(v); };
+      const onKey = e => { if (e.key === 'Escape') close(actions[0].value); };
+      ov.querySelectorAll('button').forEach(b => b.addEventListener('click', () => close(actions[b.dataset.i].value)));
+      document.addEventListener('keydown', onKey);
+      root.appendChild(ov);
+      const primary = ov.querySelector('.btn.primary') || ov.querySelector('button');
+      primary.focus();
+    });
+  }
+
+  function loadingBar(message, ms) {
+    return new Promise(resolve => {
+      const ov = document.createElement('div');
+      ov.className = 'overlay';
+      ov.innerHTML = `<div class="modal" role="status"><h3>${esc(message)}</h3><div class="loadbar"><div style="animation-duration:${ms}ms"></div></div></div>`;
+      $('modal-root').appendChild(ov);
+      setTimeout(() => { ov.remove(); resolve(); }, ms);
+    });
+  }
+
+  /* ---------- Segmented controls ---------- */
+  const segs = {};
+  document.querySelectorAll('.seg').forEach(el => {
+    const name = el.dataset.name;
+    segs[name] = el;
+    el.dataset.value = '';
+    el.innerHTML = el.dataset.options.split(',').map(o => `<button type="button" data-v="${o}">${o}</button>`).join('');
+    el.addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b || el.classList.contains('disabled')) return;
+      setSeg(name, el.dataset.value === b.dataset.v ? '' : b.dataset.v); // click again to clear
+      if (name === 'haptic' || name === 'spotGloss') updateDepthState();
+    });
+  });
+  function setSeg(name, v) {
+    const el = segs[name];
+    el.dataset.value = v || '';
+    el.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('on', b.dataset.v === v);
+      b.setAttribute('aria-pressed', b.dataset.v === v);
+    });
+  }
+  const getSeg = name => segs[name].dataset.value || null;
+  function updateDepthState() {
+    const enabled = getSeg('haptic') === 'Yes' || getSeg('spotGloss') === 'Yes';
+    segs.depth.classList.toggle('disabled', !enabled);
+    segs.depth.querySelectorAll('button').forEach(b => b.disabled = !enabled);
+    if (!enabled) setSeg('depth', '');
+  }
+
+  /* ---------- Spot color rows ---------- */
+  const colorsEl = $('colors');
+
+  function addColorRow(data = {}, locked = false) {
+    const row = document.createElement('div');
+    row.className = 'color-row';
+    const numField = k => `<div class="c-field"><label>${k}</label><input type="number" data-k="${k}" min="${RANGES[k][0]}" max="${RANGES[k][1]}" step="any" value="${data[k] ?? ''}" title="${RANGES[k][0]} to ${RANGES[k][1]}"></div>`;
+    row.innerHTML = `
+      <div class="c-field c-name-wrap"><label>Spot Color Name</label><input type="text" class="c-name" value="${esc(data.name || '')}"></div>
+      <div class="grp">${['L', 'A', 'B'].map(numField).join('')}</div>
+      <div class="grp">${['C', 'M', 'Y', 'K'].map(numField).join('')}</div>
+      <label class="c-chart"><input type="checkbox" class="c-sc" ${data.spotChart ? 'checked' : ''}> Spot Chart</label>
+      <div class="c-actions">
+        <button type="button" class="btn sm done">Done</button>
+        <button type="button" class="btn sm edit">Edit</button>
+        <button type="button" class="btn link remove" title="Remove this line">Remove</button>
+      </div>
+      <div class="c-err"></div>`;
+    row.querySelector('.done').addEventListener('click', () => {
+      const errs = validateRow(row);
+      row.querySelector('.c-err').textContent = errs.join(' ');
+      if (!errs.length) setLocked(row, true);
+    });
+    row.querySelector('.edit').addEventListener('click', async () => {
+      const ok = await modal({
+        title: 'Modify spot color?',
+        body: 'Are you sure you want to modify the colors?',
+        actions: [{ label: 'Cancel', value: false }, { label: 'Confirm', value: true, primary: true }]
+      });
+      if (ok) setLocked(row, false, true);
+    });
+    row.querySelector('.remove').addEventListener('click', () => {
+      if (colorsEl.children.length > 1) row.remove();
+      else {
+        row.querySelectorAll('input').forEach(i => { if (i.type === 'checkbox') i.checked = false; else i.value = ''; i.classList.remove('bad'); });
+        row.querySelector('.c-err').textContent = '';
+      }
+    });
+    colorsEl.appendChild(row);
+    setLocked(row, locked, false);
+    return row;
+  }
+
+  function setLocked(row, locked, focus) {
+    row.classList.toggle('locked', locked);
+    row.querySelectorAll('input').forEach(i => i.disabled = locked);
+    row.querySelector('.done').disabled = locked;
+    row.querySelector('.edit').disabled = !locked;
+    row.querySelector('.remove').hidden = locked;
+    if (locked) row.querySelector('.c-err').textContent = '';
+    if (!locked && focus) row.querySelector('.c-name').focus();
+  }
+
+  function readRow(row) {
+    const d = { name: row.querySelector('.c-name').value.trim() || null };
+    row.querySelectorAll('input[data-k]').forEach(i => { d[i.dataset.k] = i.value === '' ? null : Number(i.value); });
+    d.spotChart = row.querySelector('.c-sc').checked;
+    d.done = row.classList.contains('locked');
+    return d;
+  }
+  const rowHasData = row => { const d = readRow(row); return !!d.name || KEYS.some(k => d[k] !== null); };
+
+  function validateRow(row) {
+    const errs = [];
+    if (!row.querySelector('.c-name').value.trim()) errs.push('Enter a spot color name.');
+    const bad = [];
+    row.querySelectorAll('input[data-k]').forEach(i => {
+      const k = i.dataset.k, [min, max] = RANGES[k];
+      const v = Number(i.value);
+      const isBad = i.validity.badInput || (i.value !== '' && (isNaN(v) || v < min || v > max));
+      i.classList.toggle('bad', isBad);
+      if (isBad) bad.push(`${k} must be ${min} to ${max}.`);
+    });
+    return errs.concat(bad);
+  }
+
+  $('add-color').addEventListener('click', () => addColorRow().querySelector('.c-name').focus());
+
+  /* ---------- File name rows ---------- */
+  const filesEl = $('files');
+  function addFileRow(value = '') {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    row.innerHTML = `<input type="text" class="f-name" spellcheck="false" value="${esc(value)}"><button type="button" class="btn link remove" title="Remove this file name">Remove</button>`;
+    row.querySelector('.remove').addEventListener('click', () => {
+      if (filesEl.children.length > 1) row.remove(); else row.querySelector('input').value = '';
+    });
+    filesEl.appendChild(row);
+    return row;
+  }
+  const readFiles = () => [...filesEl.querySelectorAll('.f-name')].map(i => i.value.trim()).filter(Boolean);
+  function setFiles(list) {
+    filesEl.innerHTML = '';
+    (list.length ? list : ['']).forEach(addFileRow);
+  }
+  $('add-file').addEventListener('click', () => addFileRow().querySelector('input').focus());
+
+  /* ---------- Form read / validate ---------- */
+  const form = $('form');
+  const order = $('order');
+  const textIds = ['title', 'order', 'line', 'material', 'printer'];
+
+  $('line').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
+
+  order.addEventListener('input', () => {
+    order.value = order.value.toUpperCase().replace(/\s/g, '');
+    if (ORDER_RE.test(order.value)) $('f-order').classList.remove('invalid');
+  });
+  order.addEventListener('blur', () => {
+    $('f-order').classList.toggle('invalid', order.value !== '' && !ORDER_RE.test(order.value));
+  });
+  ['operator', 'printer', 'line'].forEach(id => $(id).addEventListener('input', () => { if ($(id).value.trim()) $('f-' + id).classList.remove('invalid'); }));
+
+  function readForm() {
+    const d = {};
+    textIds.forEach(id => { d[id] = $(id).value.trim() || null; });
+    FLAG_FIELDS.forEach(([k]) => { d[k] = getSeg(k); });
+    d.files = readFiles();
+    d.depth = getSeg('depth');
+    d.colors = [...colorsEl.children].filter(rowHasData).map(readRow);
+    d.notes = $('notes').value.trim() || null;
+    return d;
+  }
+
+  function fillForm(d, name) {
+    $('operator').value = name || '';
+    textIds.forEach(id => { $(id).value = d[id] || ''; });
+    setFiles(filesOf(d));
+    $('notes').value = d.notes || '';
+    FLAG_FIELDS.forEach(([k]) => setSeg(k, d[k] || ''));
+    updateDepthState();
+    if (d.depth && !segs.depth.classList.contains('disabled')) setSeg('depth', d.depth);
+    colorsEl.innerHTML = '';
+    (d.colors || []).forEach(c => addColorRow(c, !!c.done));
+    if (!colorsEl.children.length) addColorRow();
+  }
+
+  function formDirty() {
+    if (current) return true;
+    if ([...textIds, 'operator', 'notes'].some(id => $(id).value.trim())) return true;
+    if (readFiles().length) return true;
+    if (Object.keys(segs).some(k => getSeg(k))) return true;
+    return [...colorsEl.children].some(rowHasData);
+  }
+
+  function validateForm() {
+    let colorsOk = true;
+    [...colorsEl.children].forEach(r => {
+      if (r.classList.contains('locked') || !rowHasData(r)) return;
+      const errs = validateRow(r);
+      r.querySelector('.c-err').textContent = errs.join(' ');
+      if (errs.length) colorsOk = false;
+    });
+    const checks = {
+      'f-operator': !!$('operator').value.trim(),
+      'f-order': ORDER_RE.test(order.value.trim()),
+      'f-line': !!$('line').value.trim(),
+      'f-printer': !!$('printer').value.trim(),
+      'f-colors': colorsOk
+    };
+    let first = null;
+    for (const [id, ok] of Object.entries(checks)) {
+      $(id).classList.toggle('invalid', !ok);
+      if (!ok && !first) first = $(id);
+    }
+    if (first) { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); (first.querySelector('input') || first).focus({ preventScroll: true }); }
+    return !first;
+  }
+
+  /* ---------- Shared detail view ---------- */
+  function detailsHTML(round) {
+    const d = round.data;
+    const files = filesOf(d);
+    const kv = [['ColorMatch Title', d.title], ['Job Number', d.order], ['Line #', d.line], ['Printed', fmtDT(round.datetime)],
+      [files.length > 1 ? 'File Names' : 'File Name', files.join('\n')], ['Material', d.material], ['Printer', d.printer]];
+    FLAG_FIELDS.forEach(([k, label]) => kv.push([label, d[k]]));
+    kv.push(['Haptic/Spot Gloss Depth', d.depth]);
+    let html = `<div class="kv">${kv.filter(([, v]) => v).map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
+    if (d.colors && d.colors.length) {
+      html += `<div class="sub-cap">Spot Colors</div><table class="colors"><tr><th>Name</th>${KEYS.map(k => `<th>${k}</th>`).join('')}<th>Spot Chart</th></tr>
+        ${d.colors.map(c => `<tr><td>${esc(c.name)}</td>${KEYS.map(k => `<td>${num(c[k])}</td>`).join('')}<td>${c.spotChart ? 'Yes' : '–'}</td></tr>`).join('')}</table>`;
+    }
+    if (d.notes) html += `<div class="sub-cap">Notes</div><div class="notes">${esc(d.notes)}</div>`;
+    return html;
+  }
+
+  /* ---------- Label rendering + print ---------- */
+  // The label shows only Job #, Round, Printer and Designer; everything else lives in the log
+  function labelHTML(round, name) {
+    const d = round.data;
+    return `<div class="label">
+      <div class="l-top">
+        <div class="l-brand">COLORMATCH</div>
+        <div class="l-round"><small>ROUND</small><b>${round.round}</b></div>
+      </div>
+      <div class="l-block l-ids">
+        <div><div class="l-cap">Job #</div><div class="l-job">${esc(d.order)}</div></div>
+        <div><div class="l-cap">Line #</div><div class="l-job">${esc(d.line || '')}</div></div>
+      </div>
+      <div class="l-block"><div class="l-cap">Printer</div><div class="l-big">${esc(d.printer || '')}</div></div>
+      <div class="l-block"><div class="l-cap">Designer</div><div class="l-big">${esc(name || '')}</div></div>
+    </div>`;
+  }
+
+  function printRound(round, name) {
+    const area = $('print-area');
+    area.innerHTML = labelHTML(round, name);
+    const label = area.firstElementChild;
+    // Shrink text until everything fits on the 4x6 label
+    let s = 1;
+    label.style.setProperty('--s', s);
+    while (label.scrollHeight > label.clientHeight + 1 && s > 0.45) {
+      s = Math.round((s - 0.05) * 100) / 100;
+      label.style.setProperty('--s', s);
+    }
+    // Shrink single-line rows (Job # / Line #) until they fit across the label
+    label.querySelectorAll('.l-ids, .l-big').forEach(row => {
+      let r = 1;
+      row.style.setProperty('--s', r);
+      while (row.scrollWidth > row.clientWidth + 1 && r > 0.4) {
+        r = Math.round((r - 0.05) * 100) / 100;
+        row.style.setProperty('--s', r);
+      }
+    });
+    window.print();
+  }
+
+  /* ---------- Generator flow ---------- */
+  let current = null;   // { id, rounds: [] } for the colormatch in progress
+  let editing = false;  // true while re-working the last printed round instead of starting a new one
+
+  function updateBadge() {
+    const n = current ? current.rounds.length : 0;
+    const badge = $('round-badge');
+    badge.textContent = editing ? `Modifying Round ${n}` : `Round ${n + 1}`;
+    badge.classList.toggle('editing', editing);
+    $('edit-banner').hidden = !editing;
+    if (editing) $('edit-text').textContent = `You are modifying Round ${n}. Printing will replace Round ${n} in the log (the earlier version is kept as history).`;
+    refreshPrevControls();
+  }
+
+  function addPrevRound(round) {
+    const el = document.createElement('details');
+    el.className = 'prev';
+    el.innerHTML = `<summary>Round ${round.round}</summary><div class="details">${detailsHTML(round)}</div>`;
+    $('prev-rounds').appendChild(el);
+  }
+
+  // Only the round immediately before the one being worked on can be modified
+  function refreshPrevControls() {
+    const prevs = [...$('prev-rounds').children];
+    prevs.forEach(p => p.querySelector('.modify')?.remove());
+    const last = prevs[prevs.length - 1];
+    if (!last || editing) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn sm modify';
+    b.textContent = 'Modify this round';
+    b.addEventListener('click', e => { e.preventDefault(); modifyPrevious(); });
+    last.querySelector('summary').appendChild(b);
+  }
+
+  async function modifyPrevious() {
+    if (!current || !current.rounds.length || editing) return;
+    const n = current.rounds.length;
+    const ok = await modal({
+      title: `Return to Round ${n}?`,
+      body: `Round ${n + 1} will be removed and anything entered in it will be lost. Round ${n} will be loaded into the form so you can modify and reprint it.`,
+      actions: [{ label: 'Cancel', value: false }, { label: 'Confirm', value: true, primary: true }]
+    });
+    if (!ok) return;
+    const name = $('operator').value;
+    editing = true;
+    $('prev-rounds').lastElementChild.remove();
+    fillForm(current.rounds[n - 1].data, name);
+    form.querySelectorAll('.invalid').forEach(f => f.classList.remove('invalid'));
+    updateBadge();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Leave the saved round as it was and go back to starting the next round
+  $('stop-edit').addEventListener('click', async () => {
+    const n = current.rounds.length;
+    const ok = await modal({
+      title: 'Stop modifying?',
+      body: `Changes to Round ${n} will be discarded and the saved version kept. You'll go back to starting Round ${n + 1}.`,
+      actions: [{ label: 'Cancel', value: false }, { label: 'Confirm', value: true, primary: true }]
+    });
+    if (!ok) return;
+    editing = false;
+    const last = current.rounds[n - 1];
+    addPrevRound(last);
+    fillForm(last.data, $('operator').value);
+    updateBadge();
+  });
+
+  function resetAll() {
+    current = null;
+    editing = false;
+    $('prev-rounds').innerHTML = '';
+    form.reset();
+    Object.keys(segs).forEach(k => setSeg(k, ''));
+    updateDepthState();
+    colorsEl.innerHTML = '';
+    addColorRow();
+    setFiles([]);
+    form.querySelectorAll('.invalid').forEach(f => f.classList.remove('invalid'));
+    updateBadge();
+    window.scrollTo(0, 0);
+    $('operator').focus();
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    const data = readForm();
+    const records = loadRecords();
+    let rec = current && records.find(r => r.id === current.id);
+    if (!rec) {
+      rec = { id: nextId(records), rounds: [] };
+      records.push(rec);
+      current = { id: rec.id, rounds: [] };
+    }
+    const now = new Date().toISOString();
+    let round;
+    if (editing && rec.rounds.length) {
+      // Replace the last round, keeping the version it replaces as history
+      const old = rec.rounds[rec.rounds.length - 1];
+      const revisions = (old.revisions || []).concat([{ datetime: old.datetime, data: old.data }]);
+      round = { round: old.round, datetime: now, data, revisions };
+      rec.rounds[rec.rounds.length - 1] = round;
+      current.rounds[current.rounds.length - 1] = round;
+    } else {
+      round = { round: rec.rounds.length + 1, datetime: now, data };
+      rec.rounds.push(round);
+      current.rounds.push(round);
+    }
+    editing = false;
+    rec.name = $('operator').value.trim();   // name lives on the colormatch, not the round
+    rec.title = rec.rounds[0].data.title;
+    rec.order = rec.rounds[0].data.order;
+    rec.createdAt = rec.rounds[0].datetime;
+
+    try { saveRecords(records); }
+    catch (err) { alert('This round could not be saved to the ColorMatch Log (browser storage is full or blocked). The label will still print.'); }
+
+    printRound(round, rec.name);
+
+    const again = await modal({
+      title: 'Another round?',
+      body: 'Would you like to start another round for this colormatch?',
+      actions: [{ label: 'No', value: false }, { label: 'Yes', value: true, primary: true }]
+    });
+
+    if (again) {
+      addPrevRound(round);   // collapse the round just printed; form keeps its values for the next round
+      updateBadge();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      await loadingBar('Your colormatch will be available in the colormatch log', 1250);
+      resetAll();
+    }
+  });
+
+  async function continueColormatch(id) {
+    const rec = loadRecords().find(r => r.id === id);
+    if (!rec || !rec.rounds.length) return;
+    if (current && current.id === id) { location.hash = '#generator'; return; }
+    if (formDirty()) {
+      const ok = await modal({
+        title: 'Replace the current form?',
+        body: 'The form already has information in it. Anything not yet printed will be lost.',
+        actions: [{ label: 'Cancel', value: false }, { label: 'Continue', value: true, primary: true }]
+      });
+      if (!ok) return;
+    }
+    resetAll();
+    current = { id: rec.id, rounds: rec.rounds.slice() };
+    rec.rounds.forEach(addPrevRound);
+    fillForm(rec.rounds[rec.rounds.length - 1].data, rec.name);
+    updateBadge();
+    location.hash = '#generator';
+  }
+
+  /* ---------- Log ---------- */
+  let shownRecords = [];
+
+  function csvCell(v) {
+    const s = v === null || v === undefined ? '' : String(v);
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  function downloadCSV() {
+    const head = ['ColorMatch ID', 'Name', 'ColorMatch Title', 'Job Number', 'Line #', 'Round', 'Date/Time', 'File Name(s)', 'Material', 'Printer',
+      'White Under', 'White Over', 'Haptic', 'Spot Gloss', 'Haptic/Spot Gloss Depth', 'Spot Colors', 'Notes', 'Times Modified'];
+    const lines = [head.map(csvCell).join(',')];
+    shownRecords.forEach(rec => rec.rounds.forEach(r => {
+      const d = r.data;
+      const colors = (d.colors || []).map(c =>
+        [c.name, ...KEYS.filter(k => c[k] !== null && c[k] !== undefined).map(k => `${k} ${c[k]}`), c.spotChart ? 'Spot Chart' : null]
+          .filter(Boolean).join(' ')).join(' | ');
+      lines.push([rec.id, rec.name, d.title, d.order, d.line, r.round, fmtDT(r.datetime), filesOf(d).join(' | '), d.material, d.printer,
+        d.whiteUnder, d.whiteOver, d.haptic, d.spotGloss, d.depth, colors, d.notes, (r.revisions || []).length].map(csvCell).join(','));
+    }));
+    saveFile('﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8', `colormatch-log-${dateKey(new Date().toISOString())}.csv`);
+  }
+
+  function saveFile(content, type, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type }));
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $('download').addEventListener('click', downloadCSV);
+
+  /* ---------- Backup / restore (full copy of the log, including history) ---------- */
+  $('backup').addEventListener('click', () => {
+    const payload = { app: 'ColorMatch Round Generator', version: 1, exportedAt: new Date().toISOString(),
+      seq: parseInt(localStorage.getItem(SEQ) || '0', 10) || 0, records: loadRecords() };
+    saveFile(JSON.stringify(payload, null, 2), 'application/json', `colormatch-backup-${dateKey(payload.exportedAt)}.json`);
+  });
+  $('restore').addEventListener('click', () => $('restore-file').click());
+  $('restore-file').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    let incoming;
+    try {
+      const parsed = JSON.parse(await f.text());
+      incoming = Array.isArray(parsed) ? parsed : parsed.records;
+      if (!Array.isArray(incoming) || incoming.some(r => !r || !r.id || !Array.isArray(r.rounds))) throw new Error();
+    } catch {
+      await modal({ title: 'Not a backup file', body: 'That file is not a ColorMatch backup. Choose a file made with "Download Backup".', actions: [{ label: 'OK', value: true, primary: true }] });
+      return;
+    }
+    const records = loadRecords();
+    const lastTime = r => Math.max(...r.rounds.map(x => +new Date(x.datetime) || 0), 0);
+    let added = 0, updated = 0;
+    incoming.forEach(r => {
+      const i = records.findIndex(x => x.id === r.id);
+      if (i === -1) { records.push(r); added++; }
+      else if (lastTime(r) > lastTime(records[i]) || r.rounds.length > records[i].rounds.length) { records[i] = r; updated++; }
+    });
+    const ok = await modal({
+      title: 'Restore backup?',
+      body: `${added} new colormatch${added === 1 ? '' : 'es'} will be added and ${updated} updated with newer versions. Nothing already in this log will be removed.`,
+      actions: [{ label: 'Cancel', value: false }, { label: 'Restore', value: true, primary: true }]
+    });
+    if (!ok) return;
+    try { saveRecords(records); } catch { alert('The backup could not be saved (browser storage is full or blocked).'); return; }
+    const maxId = Math.max(parseInt(localStorage.getItem(SEQ) || '0', 10) || 0, ...records.map(r => parseInt(String(r.id).replace(/\D/g, ''), 10) || 0));
+    localStorage.setItem(SEQ, String(maxId));
+    renderLog();
+  });
+
+  function searchText(rec) {
+    const parts = [rec.id, rec.name];
+    rec.rounds.forEach(r => {
+      parts.push('round ' + r.round, fmtDT(r.datetime));
+      const d = r.data;
+      [...textIds, 'depth', 'notes'].forEach(k => parts.push(d[k]));
+      parts.push(...filesOf(d));
+      FLAG_FIELDS.forEach(([k, label]) => d[k] && parts.push(`${label} ${d[k]}`));
+      (d.colors || []).forEach(c => parts.push(c.name, ...KEYS.map(k => c[k]), c.spotChart ? 'spot chart' : null));
+    });
+    return parts.filter(p => p !== null && p !== undefined).join(' ').toLowerCase();
+  }
+
+  function renderLog() {
+    const q = $('q').value.trim().toLowerCase();
+    const from = $('from').value, to = $('to').value;
+    const all = loadRecords().filter(r => r.rounds && r.rounds.length)
+      .sort((a, b) => new Date(b.rounds[0].datetime) - new Date(a.rounds[0].datetime));
+    const list = all.filter(r => {
+      const dk = dateKey(r.rounds[0].datetime);
+      if (from && dk < from) return false;
+      if (to && dk > to) return false;
+      if (q && !searchText(r).includes(q)) return false;
+      return true;
+    });
+
+    shownRecords = list;
+    $('download').disabled = !list.length;
+    $('download').title = list.length < all.length ? 'Downloads the colormatches currently shown' : 'Downloads every colormatch';
+    $('log-count').textContent = all.length ? `${list.length} of ${all.length} colormatch${all.length === 1 ? '' : 'es'}` : '';
+    const el = $('log-list');
+    if (!all.length) { el.innerHTML = '<div class="empty">No colormatches yet. Printed rounds will appear here.</div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="empty">No colormatches match these filters.</div>'; return; }
+
+    el.innerHTML = list.map(r => `
+      <div class="log-item" data-id="${esc(r.id)}">
+        <div class="log-row">
+          <button type="button" class="log-sum" aria-expanded="false">
+            <span class="chev">▸</span>
+            <span><small>ColorMatch Title</small><b>${r.rounds[0].data.title ? esc(r.rounds[0].data.title) : '<span style="color:var(--muted)">Untitled</span>'}</b></span>
+            <span><small>Job #</small><b>${esc(r.rounds[0].data.order)}</b></span>
+            <span><small>ID</small><b>${esc(r.id)}</b></span>
+            <span><small>Round 1 Date</small><b>${esc(fmtD(r.rounds[0].datetime))}</b></span>
+          </button>
+          <button type="button" class="btn sm continue">Continue Colormatch</button>
+        </div>
+        <div class="log-body" hidden>
+          ${r.name ? `<div class="log-meta">Name: <b>${esc(r.name)}</b></div>` : ''}
+          ${r.rounds.map((rd, i) => `
+            <div class="round-block">
+              <div class="round-title"><h3>Round ${rd.round}${rd.revisions && rd.revisions.length ? ` <span class="revised">· Modified (first printed ${esc(fmtDT(rd.revisions[0].datetime))})</span>` : ''}</h3><button type="button" class="btn sm reprint" data-i="${i}">Reprint label</button></div>
+              ${detailsHTML(rd)}
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+
+  $('log-list').addEventListener('click', e => {
+    const item = e.target.closest('.log-item');
+    if (!item) return;
+    if (e.target.closest('.log-sum')) {
+      const body = item.querySelector('.log-body');
+      const sum = item.querySelector('.log-sum');
+      body.hidden = !body.hidden;
+      sum.setAttribute('aria-expanded', !body.hidden);
+      sum.querySelector('.chev').textContent = body.hidden ? '▸' : '▾';
+    }
+    if (e.target.closest('.continue')) continueColormatch(item.dataset.id);
+    const rp = e.target.closest('.reprint');
+    if (rp) {
+      const rec = loadRecords().find(r => r.id === item.dataset.id);
+      if (rec) printRound(rec.rounds[+rp.dataset.i], rec.name);
+    }
+  });
+  ['q', 'from', 'to'].forEach(id => $(id).addEventListener('input', renderLog));
+  $('clear-filters').addEventListener('click', () => { $('q').value = ''; $('from').value = ''; $('to').value = ''; renderLog(); });
+
+  /* ---------- Routing ---------- */
+  function route() {
+    const isLog = location.hash === '#log';
+    $('view-gen').hidden = isLog;
+    $('view-log').hidden = !isLog;
+    $('nav-gen').classList.toggle('active', !isLog);
+    $('nav-log').classList.toggle('active', isLog);
+    if (isLog) renderLog();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', route);
+  window.addEventListener('storage', () => { if (location.hash === '#log') renderLog(); });
+
+  /* ---------- Init ---------- */
+  addColorRow();
+  setFiles([]);
+  updateDepthState();
+  updateBadge();
+  route();
+  // Ask the browser not to evict saved data under storage pressure
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+})();
+</script>
+</body>
+</html>
