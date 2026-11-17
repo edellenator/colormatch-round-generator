@@ -296,7 +296,7 @@
     display: flex;
     flex-direction: column;
   }
-  .l-top { display: flex; border: 3px solid #000; }
+  .l-top { flex: none; display: flex; border: 3px solid #000; }
   .l-brand {
     flex: 1;
     background: #000;
@@ -313,8 +313,12 @@
   .l-round { width: 1.35in; text-align: center; padding: calc(0.06in * var(--s)) 0; }
   .l-round small { display: block; font-size: calc(10pt * var(--s)); font-weight: 800; letter-spacing: .1em; }
   .l-round b { display: block; font-size: calc(60pt * var(--s)); line-height: 1; }
-  .l-block { flex: 1; display: flex; flex-direction: column; justify-content: center; border-bottom: 2px solid #000; padding: calc(0.06in * var(--s)) 0; min-height: 0; }
+  .l-block { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; border-bottom: 2px solid #000; padding: calc(0.06in * var(--s)) 0; min-height: 0; }
   .l-block:last-child { border-bottom: 0; }
+  .l-extra { flex: none; border-top: 2px solid #000; padding: calc(0.06in * var(--s)) 0 0; margin-top: calc(0.02in * var(--s)); }
+  .l-block + .l-extra { border-top: 0; }
+  .l-text { font-weight: 700; font-size: calc(12pt * var(--s) * var(--x, 1)); line-height: 1.2; word-break: break-word; }
+  .l-notes { white-space: pre-wrap; font-weight: 600; }
   .l-cap { font-size: calc(10pt * var(--s)); font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-bottom: calc(3px * var(--s)); }
   .l-ids { flex-direction: row; justify-content: space-between; align-items: center; gap: 0.2in; }
   .l-ids > div { flex: none; }
@@ -391,7 +395,7 @@
       </div>
     </div>
 
-    <div class="section-cap">Optional details <span>(saved to the log, not printed on the label)</span></div>
+    <div class="section-cap">Optional details <span>(saved to the log; File Name(s) and Notes also print on the label when filled in)</span></div>
 
     <div class="grid">
       <div class="field full" id="f-title">
@@ -758,6 +762,7 @@
   // The label shows only Job #, Round, Printer and Designer; everything else lives in the log
   function labelHTML(round, name) {
     const d = round.data;
+    const files = filesOf(d);
     return `<div class="label">
       <div class="l-top">
         <div class="l-brand">COLORMATCH</div>
@@ -769,6 +774,8 @@
       </div>
       <div class="l-block"><div class="l-cap">Printer</div><div class="l-big">${esc(d.printer || '')}</div></div>
       <div class="l-block"><div class="l-cap">Designer</div><div class="l-big">${esc(name || '')}</div></div>
+      ${files.length ? `<div class="l-extra"><div class="l-cap">${files.length > 1 ? 'File Names' : 'File Name'}</div><div class="l-text">${files.map(f => `<div>${esc(f)}</div>`).join('')}</div></div>` : ''}
+      ${d.notes ? `<div class="l-extra"><div class="l-cap">Notes</div><div class="l-text l-notes">${esc(d.notes)}</div></div>` : ''}
     </div>`;
   }
 
@@ -776,16 +783,22 @@
     const area = $('print-area');
     area.innerHTML = labelHTML(round, name);
     const label = area.firstElementChild;
-    // Shrink text until everything fits on the 4x6 label
-    let s = 1;
+    // Shrink file names / notes first, then everything, until it all fits on the 4x6 label
+    const tooTall = () => label.scrollHeight > label.clientHeight + 1;
+    let s = 1, x = 1;
     label.style.setProperty('--s', s);
-    while (label.scrollHeight > label.clientHeight + 1 && s > 0.45) {
+    label.style.setProperty('--x', x);
+    while (tooTall() && x > 0.6) {
+      x = Math.round((x - 0.05) * 100) / 100;
+      label.style.setProperty('--x', x);
+    }
+    while (tooTall() && s > 0.5) {
       s = Math.round((s - 0.05) * 100) / 100;
       label.style.setProperty('--s', s);
     }
     // Shrink single-line rows (Job # / Line #) until they fit across the label
-    label.querySelectorAll('.l-ids, .l-big').forEach(row => {
-      let r = 1;
+    label.querySelectorAll('.l-ids').forEach(row => {
+      let r = s;
       row.style.setProperty('--s', r);
       while (row.scrollWidth > row.clientWidth + 1 && r > 0.4) {
         r = Math.round((r - 0.05) * 100) / 100;
