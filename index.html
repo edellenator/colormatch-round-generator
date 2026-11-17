@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ColorMatch Round Generator</title>
 <style>
-  @page { size: 4in 6in; margin: 0; }
+  @page { size: 3in 8in; margin: 0; }
 
   :root {
     --ink: #1b1f24;
@@ -282,43 +282,50 @@
   .loadbar div { height: 100%; width: 0; background: var(--accent); animation: fill 1.25s linear forwards; }
   @keyframes fill { to { width: 100%; } }
 
-  /* ---------- 4x6 label ---------- */
+  /* ---------- 3x8 label ---------- */
   #print-area { position: fixed; left: -10000px; top: 0; }
   .label {
     --s: 1;
-    width: 4in;
-    height: 6in;
+    width: 3in;
+    height: 8in;
     background: #fff;
     color: #000;
-    padding: 0.2in;
+    padding: 0.14in 0.12in 0.14in;
     font-family: Arial, Helvetica, sans-serif;
     overflow: hidden;
     display: flex;
     flex-direction: column;
   }
-  .l-top { flex: none; display: flex; border: 3px solid #000; }
+  .l-row { flex: none; border-bottom: 1px solid #000; padding: calc(0.07in * var(--s)) 0; }
+  .l-cap { font-size: calc(7.5pt * var(--s)); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+  .l-designer { font-size: calc(30pt * var(--s)); font-weight: 800; line-height: 1.05; word-break: break-word; }
+  .l-ids { white-space: nowrap; font-size: calc(25pt * var(--s)); font-weight: 800; line-height: 1.1; }
+  .l-ids .dash { font-weight: 400; padding: 0 0.08in; }
+  .l-inline { display: flex; align-items: baseline; gap: 0.1in; }
+  .l-inline .l-cap { flex: 0 0 0.85in; }
+  .l-val { font-size: calc(14pt * var(--s)); font-weight: 800; line-height: 1.15; word-break: break-word; min-width: 0; }
+  .l-box { flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column; border: 2px solid #000; margin-top: calc(0.16in * var(--s)); }
+  .l-top { flex: none; display: flex; border-bottom: 2px solid #000; }
   .l-brand {
     flex: 1;
     background: #000;
     color: #fff;
     font-weight: 800;
     font-size: calc(15pt * var(--s));
-    letter-spacing: .06em;
+    letter-spacing: .05em;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    padding: 0.08in;
+    padding: calc(0.12in * var(--s)) 0.06in;
   }
-  .l-round { width: 1.35in; text-align: center; padding: calc(0.06in * var(--s)) 0; }
-  .l-round small { display: block; font-size: calc(10pt * var(--s)); font-weight: 800; letter-spacing: .1em; }
-  .l-round b { display: block; font-size: calc(60pt * var(--s)); line-height: 1; }
-  .l-block { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: center; border-bottom: 2px solid #000; padding: calc(0.06in * var(--s)) 0; min-height: 0; }
-  .l-block:last-child { border-bottom: 0; }
-  .l-extra { flex: none; border-top: 2px solid #000; padding: calc(0.06in * var(--s)) 0 0; margin-top: calc(0.02in * var(--s)); }
-  .l-block + .l-extra { border-top: 0; }
-  .l-text { font-weight: 700; font-size: calc(12pt * var(--s) * var(--x, 1)); line-height: 1.2; word-break: break-word; }
-  .l-notes { white-space: pre-wrap; font-weight: 600; }
+  .l-round { width: 0.95in; text-align: center; border-left: 2px solid #000; padding: calc(0.05in * var(--s)) 0; }
+  .l-round small { display: block; font-size: calc(7.5pt * var(--s)); font-weight: 700; letter-spacing: .12em; }
+  .l-round b { display: block; font-size: calc(30pt * var(--s)); line-height: 1; }
+  .l-box-body { padding: calc(0.08in * var(--s)) 0.1in; min-height: 0; }
+  .l-box-body .l-cap { border-bottom: 1px solid #000; padding-bottom: calc(0.05in * var(--s)); margin-bottom: calc(0.06in * var(--s)); }
+  .l-text { font-size: calc(13pt * var(--s) * var(--x, 1)); line-height: 1.25; word-break: break-word; }
+  .l-notes { white-space: pre-wrap; }
+  .l-files { margin-top: calc(0.06in * var(--s) * var(--x, 1)); }
   .l-cap { font-size: calc(10pt * var(--s)); font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-bottom: calc(3px * var(--s)); }
   .l-ids { flex-direction: row; justify-content: space-between; align-items: center; gap: 0.2in; }
   .l-ids > div { flex: none; }
@@ -395,7 +402,7 @@
       </div>
     </div>
 
-    <div class="section-cap">Optional details <span>(saved to the log; File Name(s) and Notes also print on the label when filled in)</span></div>
+    <div class="section-cap">Optional details <span>(saved to the log; Material, File Name(s) and Notes also print on the label when filled in)</span></div>
 
     <div class="grid">
       <div class="field full" id="f-title">
@@ -758,24 +765,27 @@
     return html;
   }
 
-  /* ---------- Label rendering + print ---------- */
-  // The label shows only Job #, Round, Printer and Designer; everything else lives in the log
+  /* ---------- Label rendering + print (3 x 8 in) ---------- */
   function labelHTML(round, name) {
     const d = round.data;
     const files = filesOf(d);
+    const body = [
+      d.notes ? `<div class="l-text l-notes">${esc(d.notes)}</div>` : '',
+      files.length ? `<div class="l-text l-files">${files.map(f => `<div>${esc(f)}</div>`).join('')}</div>` : ''
+    ].join('');
     return `<div class="label">
-      <div class="l-top">
-        <div class="l-brand">COLORMATCH</div>
-        <div class="l-round"><small>ROUND</small><b>${round.round}</b></div>
+      <div class="l-row"><div class="l-cap">Designer</div><div class="l-designer">${esc(name || '')}</div></div>
+      <div class="l-row"><div class="l-cap">Order # &ndash; Line #</div>
+        <div class="l-ids">${esc(d.order)}${d.line ? `<span class="dash">&ndash;</span>${esc(d.line)}` : ''}</div></div>
+      <div class="l-row l-inline"><div class="l-cap">Printer</div><div class="l-val">${esc(d.printer || '')}</div></div>
+      ${d.material ? `<div class="l-row l-inline"><div class="l-cap">Material</div><div class="l-val">${esc(d.material)}</div></div>` : ''}
+      <div class="l-box">
+        <div class="l-top">
+          <div class="l-brand">COLORMATCH</div>
+          <div class="l-round"><small>ROUND</small><b>${round.round}</b></div>
+        </div>
+        ${body ? `<div class="l-box-body"><div class="l-cap">Notes for Designer</div>${body}</div>` : ''}
       </div>
-      <div class="l-block l-ids">
-        <div><div class="l-cap">Job #</div><div class="l-job">${esc(d.order)}</div></div>
-        <div><div class="l-cap">Line #</div><div class="l-job">${esc(d.line || '')}</div></div>
-      </div>
-      <div class="l-block"><div class="l-cap">Printer</div><div class="l-big">${esc(d.printer || '')}</div></div>
-      <div class="l-block"><div class="l-cap">Designer</div><div class="l-big">${esc(name || '')}</div></div>
-      ${files.length ? `<div class="l-extra"><div class="l-cap">${files.length > 1 ? 'File Names' : 'File Name'}</div><div class="l-text">${files.map(f => `<div>${esc(f)}</div>`).join('')}</div></div>` : ''}
-      ${d.notes ? `<div class="l-extra"><div class="l-cap">Notes</div><div class="l-text l-notes">${esc(d.notes)}</div></div>` : ''}
     </div>`;
   }
 
@@ -783,8 +793,9 @@
     const area = $('print-area');
     area.innerHTML = labelHTML(round, name);
     const label = area.firstElementChild;
-    // Shrink file names / notes first, then everything, until it all fits on the 4x6 label
-    const tooTall = () => label.scrollHeight > label.clientHeight + 1;
+    // Shrink notes / file names first, then everything, until it all fits on the 3x8 label
+    const box = label.querySelector('.l-box');
+    const tooTall = () => label.scrollHeight > label.clientHeight + 1 || box.scrollHeight > box.clientHeight + 1;
     let s = 1, x = 1;
     label.style.setProperty('--s', s);
     label.style.setProperty('--x', x);
@@ -796,7 +807,7 @@
       s = Math.round((s - 0.05) * 100) / 100;
       label.style.setProperty('--s', s);
     }
-    // Shrink single-line rows (Job # / Line #) until they fit across the label
+    // Shrink the Order # - Line # row until it fits across the label
     label.querySelectorAll('.l-ids').forEach(row => {
       let r = s;
       row.style.setProperty('--s', r);

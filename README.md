@@ -1,6 +1,6 @@
 # ColorMatch Round Generator
 
-A single-page web app for filling out colormatch rounds and printing 4×6 in labels.
+A single-page web app for filling out colormatch rounds and printing 3×8 in labels.
 
 **Live site:** https://edellenator.github.io/colormatch-round-generator/
 
@@ -12,7 +12,7 @@ A single-page web app for filling out colormatch rounds and printing 4×6 in lab
 - **Download CSV** exports the log for Excel.
 
 ## Printing
-In the print dialog, choose the label printer and set the paper size to 4 × 6 in, margins **None**, scale **100%**.
+In the print dialog, choose the label printer and set the paper size to 3 × 8 in, margins **None**, scale **100%**.
 
 ## Publishing (GitHub Pages)
 The site is published by the GitHub Actions workflow in `.github/workflows/static.yml`
