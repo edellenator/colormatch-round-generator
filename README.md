@@ -15,5 +15,9 @@ A single-page web app for filling out colormatch rounds and printing 4×6 in lab
 In the print dialog, choose the label printer and set the paper size to 4 × 6 in, margins **None**, scale **100%**.
 
 ## Publishing (GitHub Pages)
-Settings → Pages → Build and deployment → Source: *Deploy from a branch* → Branch: `main` / `(root)` → Save.
-This repository is already published this way.
+The site is published by the GitHub Actions workflow in `.github/workflows/static.yml`
+(Settings → Pages → Build and deployment → Source: *GitHub Actions*).
+
+- Every commit to `main` redeploys the site automatically, usually within a minute.
+- To redeploy by hand: Actions tab → *Deploy static content to Pages* → *Run workflow*.
+- Check a deployment's progress or errors in the Actions tab.
